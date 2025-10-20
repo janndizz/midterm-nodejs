@@ -1,30 +1,46 @@
 import express from "express";
 import cors from "cors";
-import mongoose from "mongoose";
+import connectDB from "./config/db.js";
+import Post from "./models/Post.js";
+import authRoutes from "./routes/authRoutes.js"; // <-- route login/register
 
 const app = express();
+
+// --- MIDDLEWARE --- //
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect("mongodb://mongo:27017/blogdb")
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.log(err));
+// --- KẾT NỐI DATABASE --- //
+connectDB();
 
-const postSchema = new mongoose.Schema({
-  title: String,
-  content: String
-});
-const Post = mongoose.model("Post", postSchema);
+// --- ROUTES --- //
 
+// ✅ Login & Register
+app.use("/api/auth", authRoutes);
+
+// ✅ Lấy tất cả bài viết
 app.get("/api/posts", async (req, res) => {
-  const posts = await Post.find();
-  res.json(posts);
+  try {
+    const posts = await Post.find().populate("author", "username email");
+    res.json(posts);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
+// ✅ Tạo bài viết mới
 app.post("/api/posts", async (req, res) => {
-  const post = new Post(req.body);
-  await post.save();
-  res.json(post);
+  try {
+    const post = new Post(req.body);
+    await post.save();
+    res.status(201).json(post);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ message: "Create post failed" });
+  }
 });
 
-app.listen(5000, () => console.log("🚀 Backend running on port 5000"));
+// --- SERVER --- //
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`✅ Backend running on port ${PORT}`));

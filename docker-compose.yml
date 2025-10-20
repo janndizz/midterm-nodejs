@@ -1,26 +1,52 @@
 version: "3"
+
 services:
   mongo:
     image: mongo:latest
     container_name: mongo
+    restart: always
     ports:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+    networks:
+      - app-network
 
   backend:
     build: ./backend
+    container_name: backend
+    restart: always
     ports:
       - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/blogdb
+    volumes:
+      - ./backend:/app         
+      - /app/node_modules    
+    command: npm run dev       
     depends_on:
       - mongo
+    networks:
+      - app-network
 
   frontend:
     build: ./frontend
+    container_name: frontend
+    restart: always
     ports:
       - "3000:3000"
+    volumes:
+      - ./frontend:/app         
+      - /app/node_modules
+    command: npm start        
     depends_on:
       - backend
+    networks:
+      - app-network
 
 volumes:
   mongo-data:
+
+networks:
+  app-network:
+    driver: bridge
