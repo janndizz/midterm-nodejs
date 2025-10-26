@@ -1,46 +1,22 @@
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
 import connectDB from "./config/db.js";
-import Post from "./models/Post.js";
-import authRoutes from "./routes/authRoutes.js"; // <-- route login/register
+import authRoutes from "./routes/authRoutes.js";
+import postRoutes from "./routes/postRoutes.js";
 
+dotenv.config();
 const app = express();
 
-// --- MIDDLEWARE --- //
 app.use(cors());
 app.use(express.json());
 
-// --- KẾT NỐI DATABASE --- //
+// Kết nối DB
 connectDB();
 
-// --- ROUTES --- //
+// Routes
+app.use("/api/users", authRoutes);
+app.use("/api/posts", postRoutes);
 
-// ✅ Login & Register
-app.use("/api/auth", authRoutes);
-
-// ✅ Lấy tất cả bài viết
-app.get("/api/posts", async (req, res) => {
-  try {
-    const posts = await Post.find().populate("author", "username email");
-    res.json(posts);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// ✅ Tạo bài viết mới
-app.post("/api/posts", async (req, res) => {
-  try {
-    const post = new Post(req.body);
-    await post.save();
-    res.status(201).json(post);
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ message: "Create post failed" });
-  }
-});
-
-// --- SERVER --- //
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Backend running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));

@@ -4,22 +4,23 @@ import dotenv from "dotenv";
 import User from "./models/User.js";
 import Post from "./models/Post.js";
 
-// Load biến môi trường (.env nếu có)
+// --- Load biến môi trường ---
 dotenv.config();
 
-// Kết nối MongoDB
+// --- URI Mongo ---
 const MONGO_URI = process.env.MONGO_URI || "mongodb://mongo:27017/blogdb";
 
 const seedData = async () => {
   try {
+    console.log("Connecting to MongoDB...");
     await mongoose.connect(MONGO_URI);
     console.log("Connected to MongoDB for seeding...");
 
-    // Xóa dữ liệu cũ
-    await User.deleteMany();
-    await Post.deleteMany();
+    // --- Xóa toàn bộ database cũ ---
+    await mongoose.connection.dropDatabase();
+    console.log("Dropped old database!");
 
-    // Tạo user mẫu
+    // --- Tạo user mẫu ---
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash("123456", salt);
 
@@ -29,9 +30,9 @@ const seedData = async () => {
       { username: "alice", email: "alice@example.com", password: hashedPassword },
     ]);
 
-    console.log("👤 Sample users created:", users.length);
+    console.log(`Created ${users.length} sample users.`);
 
-    //Tạo bài viết mẫu
+    // --- Tạo bài viết mẫu ---
     const posts = await Post.insertMany([
       {
         title: "Welcome to My Blog",
@@ -50,9 +51,10 @@ const seedData = async () => {
       },
     ]);
 
-    console.log("Sample posts created:", posts.length);
+    console.log(`Created ${posts.length} sample posts.`);
 
     console.log("Seeding completed successfully!");
+    await mongoose.disconnect();
     process.exit(0);
   } catch (error) {
     console.error("Seeding failed:", error);
