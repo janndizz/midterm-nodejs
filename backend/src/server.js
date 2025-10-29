@@ -8,6 +8,15 @@ import postRoutes from "./routes/postRoutes.js";
 dotenv.config();
 const app = express();
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage()
+  });
+});
+
 app.use(cors());
 app.use(express.json());
 

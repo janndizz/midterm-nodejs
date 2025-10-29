@@ -16,6 +16,8 @@ import { useNavigate } from "react-router-dom";
 // Import icons từ react-icons
 import { FaNewspaper, FaSignOutAlt, FaSignInAlt, FaUser, FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 import { MdManageAccounts } from "react-icons/md";
+import MediaUpload from "./MediaUpload";
+import PostMedia from "./PostMedia";
 
 const Home = () => {
   const [posts, setPosts] = useState([]);
@@ -27,10 +29,36 @@ const Home = () => {
   const [editingPost, setEditingPost] = useState(null);
   const navigate = useNavigate();
 
+  const checkProcessingStatus = async (postId) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/posts/${postId}/status`);
+      return res.data;
+    } catch (err) {
+      console.error('Error checking status:', err);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const postsWithProcessing = posts.filter(post => 
+        post.media && post.media.some(m => m.status !== 'processed')
+      );
+
+      if (postsWithProcessing.length > 0) {
+        // Refresh posts
+        await fetchPosts();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [posts]);
+
   useEffect(() => {
     fetchPosts();
     fetchUserProfile();
   }, []);
+  
 
   const fetchPosts = async () => {
     try {
@@ -70,19 +98,70 @@ const Home = () => {
     navigate("/login");
   };
 
+  const [mediaFiles, setMediaFiles] = useState([]);
+
   const handleAddPost = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
-    if (!token) return alert("You need to login first!");
+    if (!token) {
+      alert("You need to login first!");
+      return;
+    }
+
+    // Validate inputs
+    if (!newPost.title.trim() || !newPost.content.trim()) {
+      alert("Title and content are required!");
+      return;
+    }
 
     try {
-      const res = await axios.post("http://localhost:5000/api/posts", newPost, {
-        headers: { Authorization: `Bearer ${token}` },
+      const formData = new FormData();
+      formData.append('title', newPost.title.trim());
+      formData.append('content', newPost.content.trim());
+      formData.append('tags', newPost.tags || '');
+      
+      // Add media files
+      console.log('Uploading files:', mediaFiles.length);
+      mediaFiles.forEach((file, index) => {
+        console.log(`File ${index}:`, file.name, file.type, file.size);
+        formData.append('media', file);
       });
+
+      const res = await axios.post("http://localhost:5000/api/posts", formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        },
+        timeout: 60000 // 60 second timeout for large files
+      });
+      
+      console.log('Post created:', res.data);
+      
+      // Update posts list
       setMyPosts([res.data, ...myPosts]);
-      setNewPost({ title: "", content: "" });
+      setPosts([res.data, ...posts]); // Also update all posts
+      
+      // Reset form
+      setNewPost({ title: "", content: "", tags: "" });
+      setMediaFiles([]);
+      
+      alert("Post created successfully!");
     } catch (err) {
       console.error("Error adding post:", err);
+      
+      if (err.response) {
+        // Server responded with error
+        alert(`Error: ${err.response.data.message || 'Failed to create post'}`);
+        console.error('Server error:', err.response.data);
+      } else if (err.request) {
+        // Request made but no response
+        alert("No response from server. Please check your connection.");
+        console.error('No response:', err.request);
+      } else {
+        // Error setting up request
+        alert(`Error: ${err.message}`);
+        console.error('Request error:', err.message);
+      }
     }
   };
 
@@ -202,8 +281,18 @@ const Home = () => {
                   <Card.Subtitle className="text-muted mb-2">
                     by {p.author?.username || "Unknown"} •{" "}
                     {new Date(p.createdAt).toLocaleString()}
+                    {p.tags && p.tags.length > 0 && (
+                      <span className="ms-2">
+                        {p.tags.map(tag => (
+                          <span key={tag} className="badge bg-secondary me-1">#{tag}</span>
+                        ))}
+                      </span>
+                    )}
                   </Card.Subtitle>
                   <Card.Text>{p.content}</Card.Text>
+                  
+                  {/* Hiển thị media */}
+                  <PostMedia media={p.media} />
                 </Card.Body>
               </Card>
             ))
@@ -286,44 +375,34 @@ const Home = () => {
                   {editingPost ? "Edit Post" : "Add New Post"}
                 </h5>
                 <Form onSubmit={editingPost ? handleUpdate : handleAddPost}>
-                  <Form.Control
-                    placeholder="Title"
-                    className="mb-2"
-                    value={newPost.title}
-                    onChange={(e) =>
-                      setNewPost({ ...newPost, title: e.target.value })
-                    }
-                  />
-                  <Form.Control
-                    as="textarea"
-                    rows={3}
-                    placeholder="Content"
-                    className="mb-2"
-                    value={newPost.content}
-                    onChange={(e) =>
-                      setNewPost({ ...newPost, content: e.target.value })
-                    }
-                  />
-                  <div className="d-flex gap-2">
-                    <Button type="submit" variant={editingPost ? "warning" : "primary"}>
-                      {editingPost ? "Update" : "Add Post"}
-                    </Button>
-                    {editingPost && (
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setEditingPost(null);
-                          setNewPost({ title: "", content: "" });
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    )}
-                  </div>
-                </Form>
+                <Form.Control
+                  placeholder="Title"
+                  className="mb-2"
+                  value={newPost.title}
+                  onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
+                />
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  placeholder="Content"
+                  className="mb-2"
+                  value={newPost.content}
+                  onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
+                />
+                <Form.Control
+                  placeholder="Tags (comma separated)"
+                  className="mb-2"
+                  value={newPost.tags || ''}
+                  onChange={(e) => setNewPost({ ...newPost, tags: e.target.value })}
+                />
+                
+                <MediaUpload onFilesChange={setMediaFiles} />
+                
+                <Button type="submit" variant="primary">Add Post</Button>
+              </Form>
               </Card>
 
-              {/* Danh sách bài viết của user */}
+              {/* List posts of user */}
               <h5 className="d-flex align-items-center gap-2">
                 <FaNewspaper /> My Posts
               </h5>
@@ -334,9 +413,22 @@ const Home = () => {
                   <Card key={p._id} className="mb-3 shadow-sm">
                     <Card.Body>
                       <Card.Title>{p.title}</Card.Title>
+                      <Card.Subtitle className="text-muted mb-2">
+                        {new Date(p.createdAt).toLocaleString()}
+                        {p.tags && p.tags.length > 0 && (
+                          <span className="ms-2">
+                            {p.tags.map(tag => (
+                              <span key={tag} className="badge bg-secondary me-1">#{tag}</span>
+                            ))}
+                          </span>
+                        )}
+                      </Card.Subtitle>
                       <Card.Text>{p.content}</Card.Text>
+                      
+                      {/* Hiển thị media */}
+                      <PostMedia media={p.media} />
 
-                      <div className="d-flex gap-2">
+                      <div className="d-flex gap-2 mt-3">
                         <Button
                           variant="warning"
                           size="sm"
