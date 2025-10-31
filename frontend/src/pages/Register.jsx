@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Form, Button, Container, Row, Col, InputGroup, Alert } from "react-bootstrap";
 import { FaUser, FaLock, FaEnvelope } from "react-icons/fa";
-import axios from "axios";
+import API from "../api/axios"; // Import API instance
 import { useNavigate } from "react-router-dom";
 
 const Register = () => {
@@ -12,6 +12,7 @@ const Register = () => {
     confirmPassword: "",
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -20,16 +21,22 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       return;
     }
 
+    setLoading(true);
     try {
-      await axios.post("http://localhost:5000/api/users/register", formData);
+      await API.post("/users/register", formData);
       navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
+      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      console.error("Registration error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -49,10 +56,11 @@ const Register = () => {
                     <Form.Control
                       type="text"
                       name="username"
-                      placeholder="Your Usermame"
+                      placeholder="Your Username"
                       value={formData.username}
                       onChange={handleChange}
                       required
+                      disabled={loading}
                     />
                   </InputGroup>
                 </Form.Group>
@@ -68,6 +76,7 @@ const Register = () => {
                       value={formData.email}
                       onChange={handleChange}
                       required
+                      disabled={loading}
                     />
                   </InputGroup>
                 </Form.Group>
@@ -83,6 +92,7 @@ const Register = () => {
                       value={formData.password}
                       onChange={handleChange}
                       required
+                      disabled={loading}
                     />
                   </InputGroup>
                 </Form.Group>
@@ -98,12 +108,18 @@ const Register = () => {
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       required
+                      disabled={loading}
                     />
                   </InputGroup>
                 </Form.Group>
 
-                <Button type="submit" variant="success" className="px-5">
-                  Register
+                <Button 
+                  type="submit" 
+                  variant="success" 
+                  className="px-5"
+                  disabled={loading}
+                >
+                  {loading ? "Registering..." : "Register"}
                 </Button>
 
                 <p className="mt-3">

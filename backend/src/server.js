@@ -17,6 +17,12 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/api/health', (req, res) => {
+  const containerId = process.env.HOSTNAME || 'unknown';
+  console.log(`[HEALTH] Container ID: ${containerId}`);
+  res.json({ status: 'OK', container: containerId });
+});
+
 app.use(cors());
 app.use(express.json());
 

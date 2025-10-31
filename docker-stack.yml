@@ -107,25 +107,31 @@ services:
           memory: 512M
 
   frontend:
-    image: nguyenlher/blog-frontend:latest
-    networks:
-      - app-network
-    environment:
-      - REACT_APP_API_URL=http://nginx:80/api
-    deploy:
-      replicas: 2
-      update_config:
-        parallelism: 1
-        delay: 10s
-        failure_action: rollback
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-      resources:
-        limits:
-          cpus: '0.3'
-          memory: 256M
+      image: nguyenlher/blog-frontend:latest
+      networks:
+        - app-network
+      environment:
+        - REACT_APP_API_URL=/api
+        - NODE_OPTIONS=--max-old-space-size=1024
+        - WDS_SOCKET_PORT=0
+        - WATCHPACK_POLLING=true
+      deploy:
+        replicas: 1
+        update_config:
+          parallelism: 1
+          delay: 10s
+          failure_action: rollback
+        restart_policy:
+          condition: on-failure
+          delay: 5s
+          max_attempts: 3
+        resources:
+          limits:
+            cpus: '0.5'
+            memory: 1536M
+          reservations:
+            cpus: '0.25'
+            memory: 768M
 
   nginx:
     image: nginx:alpine

@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { Form, Button, Container, Row, Col, Alert, InputGroup } from "react-bootstrap";
 import { FaUser, FaLock } from "react-icons/fa";
-import axios from "axios";
+import API from "../api/axios"; // Import API instance
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -16,13 +17,17 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/users/login", formData);
+      const res = await API.post("/users/login", formData);
       localStorage.setItem("token", res.data.token);
       navigate("/"); // chuyển về trang chủ
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(err.response?.data?.message || "Login failed. Please check your connection.");
+      console.error("Login error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,6 +51,7 @@ const Login = () => {
                       value={formData.username}
                       onChange={handleChange}
                       required
+                      disabled={loading}
                     />
                   </InputGroup>
                 </Form.Group>
@@ -61,15 +67,23 @@ const Login = () => {
                       value={formData.password}
                       onChange={handleChange}
                       required
+                      disabled={loading}
                     />
                   </InputGroup>
                 </Form.Group>
 
-                <Button type="submit" variant="success" className="px-5">Login</Button>
+                <Button 
+                  type="submit" 
+                  variant="success" 
+                  className="px-5"
+                  disabled={loading}
+                >
+                  {loading ? "Logging in..." : "Login"}
+                </Button>
               </Form>
 
               <p className="mt-3">
-                Don’t have an account?{" "}
+                Don't have an account?{" "}
                 <a href="/register">Register now!</a>
               </p>
             </div>

@@ -5,6 +5,9 @@ import { FaPlay } from 'react-icons/fa';
 const PostMedia = ({ media }) => {
   if (!media || media.length === 0) return null;
 
+  // ✅ FIXED: Dùng relative URL hoặc env variable
+  const API_BASE = process.env.REACT_APP_API_URL || '/api';
+
   const formatDuration = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -20,7 +23,7 @@ const PostMedia = ({ media }) => {
               item.status === 'processed' ? (
                 <Card.Img
                   variant="top"
-                  src={`http://localhost:5000/api/posts/media/images/${item.filename}`}
+                  src={`${API_BASE}/posts/media/images/${item.filename}`}
                   alt={item.originalName}
                   style={{ height: '300px', objectFit: 'cover' }}
                   onError={(e) => {
@@ -52,16 +55,16 @@ const PostMedia = ({ media }) => {
                 </div>
               )
             ) : (
-              // Video processing logic tương tự
+              // Video processing logic
               item.status === 'processed' ? (
                 <div style={{ position: 'relative' }}>
                   <video
                     controls
                     style={{ width: '100%', height: '300px', objectFit: 'cover' }}
-                    poster={`http://localhost:5000/api/posts/media/thumbnails/${item.thumbnail}`}
+                    poster={`${API_BASE}/posts/media/thumbnails/${item.thumbnail}`}
                   >
                     <source
-                      src={`http://localhost:5000/api/posts/media/videos/${item.filename}`}
+                      src={`${API_BASE}/posts/media/videos/${item.filename}`}
                       type={item.mimeType}
                     />
                   </video>

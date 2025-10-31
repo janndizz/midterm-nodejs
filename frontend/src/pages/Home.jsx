@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import API from "../api/axios";
 import {
   Container,
   Tabs,
@@ -31,7 +32,7 @@ const Home = () => {
 
   const checkProcessingStatus = async (postId) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/posts/${postId}/status`);
+      const res = await API.get(`/posts/${postId}/status`);
       return res.data;
     } catch (err) {
       console.error('Error checking status:', err);
@@ -62,7 +63,7 @@ const Home = () => {
 
   const fetchPosts = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/posts");
+      const res = await API.get("/posts");
       const sorted = res.data.sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
@@ -79,12 +80,12 @@ const Home = () => {
     if (!token) return;
 
     try {
-      const userRes = await axios.get("http://localhost:5000/api/users/me", {
+      const userRes = await API.get("/users/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUser(userRes.data);
 
-      const myPostsRes = await axios.get("http://localhost:5000/api/posts/my", {
+      const myPostsRes = await API.get("/posts/my", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMyPosts(myPostsRes.data);
@@ -127,7 +128,7 @@ const Home = () => {
         formData.append('media', file);
       });
 
-      const res = await axios.post("http://localhost:5000/api/posts", formData, {
+      const res = await API.post("/posts", formData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -172,7 +173,7 @@ const Home = () => {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/posts/${id}`, {
+      await API.delete(`/posts/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
         data: { userId: user._id }, 
       });
@@ -194,8 +195,8 @@ const Home = () => {
     if (!token) return alert("You need to login first!");
 
     try {
-      const res = await axios.put(
-        `http://localhost:5000/api/posts/${editingPost._id}`,
+      const res = await API.put(
+        `/posts/${editingPost._id}`,
         {
           ...newPost,
           userId: user._id,
@@ -332,8 +333,8 @@ const Home = () => {
                     if (!token) return alert("You need to login first!");
 
                     try {
-                      await axios.put(
-                        "http://localhost:5000/api/users/change-password",
+                      await API.put(
+                        "/users/change-password",
                         { oldPassword, newPassword },
                         { headers: { Authorization: `Bearer ${token}` } }
                       );
